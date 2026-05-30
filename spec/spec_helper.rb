@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
+require "date"
 require "acts_as_calculator"
 
 RSpec.configure do |config|
