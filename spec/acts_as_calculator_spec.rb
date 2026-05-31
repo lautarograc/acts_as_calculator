@@ -6,9 +6,11 @@ RSpec.describe ActsAsCalculator do
   end
 
   it "loads without Rails, ActiveRecord or ActiveSupport" do
-    expect(defined?(Rails)).to be_nil
-    expect(defined?(ActiveRecord)).to be_nil
-    expect(defined?(ActiveSupport)).to be_nil
+    script = %(require "acts_as_calculator"; ) +
+             %(print [defined?(Rails), defined?(ActiveRecord), defined?(ActiveSupport)].compact.inspect)
+    lib = File.expand_path("../lib", __dir__)
+
+    expect(IO.popen([Gem.ruby, "-I#{lib}", "-e", script], err: %i[child out], &:read)).to eq("[]")
   end
 
   it "loads every core constant" do

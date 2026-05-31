@@ -12,4 +12,6 @@ module ActsAsCalculator
   class UnknownStrategyError < Error; end
   class ApportionmentError < Error; end
   class AggregationError < Error; end
+  class FormulaNotFoundError < Error; end
+  class NoEffectiveVersionError < Error; end
 end

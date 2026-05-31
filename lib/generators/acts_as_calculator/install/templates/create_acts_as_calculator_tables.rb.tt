@@ -1,0 +1,109 @@
+# frozen_string_literal: true
+
+class CreateActsAsCalculatorTables < ActiveRecord::Migration<%= migration_version %>
+  def change
+    create_table :calculator_formulas do |t|
+      t.string :key, null: false
+      t.string :scope, null: false, default: "default"
+      t.references :owner, polymorphic: true, null: true, index: false
+      t.timestamps
+    end
+    add_index :calculator_formulas, %i[key scope owner_type owner_id],
+              unique: true, name: "idx_calc_formulas_on_key_scope_owner"
+    add_index :calculator_formulas, %i[owner_type owner_id], name: "idx_calc_formulas_on_owner"
+
+    create_table :calculator_formula_versions do |t|
+      t.bigint :formula_id, null: false
+      t.integer :version_number, null: false
+      t.text :expression, null: false
+      t.date :effective_from, null: false
+      t.date :effective_to
+      t.string :status, null: false, default: "draft"
+      t.text :change_note
+      t.timestamps
+    end
+    add_index :calculator_formula_versions, %i[formula_id version_number],
+              unique: true, name: "idx_calc_versions_on_formula_and_number"
+    add_index :calculator_formula_versions, %i[formula_id status effective_from effective_to],
+              name: "idx_calc_versions_on_effective_range"
+    add_foreign_key :calculator_formula_versions, :calculator_formulas, column: :formula_id
+
+    create_table :calculator_variables do |t|
+      t.bigint :formula_version_id, null: false
+      t.string :name, null: false
+      t.string :source_type, null: false
+      t.column :source_config, json_type, null: false, default: {}
+      t.boolean :required, null: false, default: true
+      t.timestamps
+    end
+    add_index :calculator_variables, %i[formula_version_id name],
+              unique: true, name: "idx_calc_variables_on_version_and_name"
+    add_foreign_key :calculator_variables, :calculator_formula_versions, column: :formula_version_id
+
+    create_table :calculator_lookup_tables do |t|
+      t.string :key, null: false
+      t.string :scope, null: false, default: "default"
+      t.references :owner, polymorphic: true, null: true, index: false
+      t.timestamps
+    end
+    add_index :calculator_lookup_tables, %i[key scope owner_type owner_id],
+              unique: true, name: "idx_calc_lookup_tables_on_key_scope_owner"
+    add_index :calculator_lookup_tables, %i[owner_type owner_id], name: "idx_calc_lookup_tables_on_owner"
+
+    create_table :calculator_lookup_table_entries do |t|
+      t.bigint :lookup_table_id, null: false
+      t.integer :position, null: false, default: 0
+      t.decimal :from, precision: 20, scale: 6
+      t.decimal :to, precision: 20, scale: 6
+      t.decimal :value, precision: 20, scale: 6, null: false
+      t.timestamps
+    end
+    add_index :calculator_lookup_table_entries, %i[lookup_table_id position],
+              name: "idx_calc_lookup_entries_on_table_and_position"
+    add_foreign_key :calculator_lookup_table_entries, :calculator_lookup_tables, column: :lookup_table_id
+
+    create_table :calculator_templates do |t|
+      t.string :key, null: false
+      t.string :scope, null: false, default: "default"
+      t.references :owner, polymorphic: true, null: true, index: false
+      t.text :body, null: false
+      t.string :format, null: false, default: "html"
+      t.integer :version_number, null: false, default: 1
+      t.timestamps
+    end
+    add_index :calculator_templates, %i[key scope owner_type owner_id version_number],
+              unique: true, name: "idx_calc_templates_on_key_scope_owner_version"
+    add_index :calculator_templates, %i[owner_type owner_id], name: "idx_calc_templates_on_owner"
+
+    create_table :calculator_runs do |t|
+      t.references :calculable, polymorphic: true, null: false, index: false
+      t.bigint :formula_version_id, null: false
+      t.date :as_of_date, null: false
+      t.column :inputs, json_type, null: false, default: {}
+      t.column :breakdown, json_type, null: false, default: {}
+      t.decimal :result, precision: 30, scale: 10, null: false
+      t.timestamps
+    end
+    add_index :calculator_runs, %i[calculable_type calculable_id as_of_date],
+              name: "idx_calc_runs_on_calculable_and_date"
+    add_index :calculator_runs, :formula_version_id, name: "idx_calc_runs_on_formula_version"
+    add_foreign_key :calculator_runs, :calculator_formula_versions, column: :formula_version_id
+
+    add_global_uniqueness :calculator_formulas, %i[key scope], "idx_calc_formulas_global_key_scope"
+    add_global_uniqueness :calculator_lookup_tables, %i[key scope], "idx_calc_lookup_tables_global_key_scope"
+    add_global_uniqueness :calculator_templates, %i[key scope version_number],
+                          "idx_calc_templates_global_key_scope_version"
+  end
+
+  private
+
+  def add_global_uniqueness(table, columns, name)
+    return unless connection.supports_partial_index?
+
+    add_index table, columns, unique: true, where: "owner_id IS NULL", name: name
+  end
+
+  def json_type
+    connection.adapter_name.match?(/postgres/i) ? :jsonb : :json
+  end
+end

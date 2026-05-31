@@ -22,4 +22,21 @@ require_relative "acts_as_calculator/aggregation"
 require_relative "acts_as_calculator/aggregate_results"
 
 module ActsAsCalculator
+  DEFAULT_SCOPE = "default"
+
+  def self.table_name_prefix
+    "calculator_"
+  end
 end
+
+require_relative "acts_as_calculator/cast_date"
+require_relative "acts_as_calculator/cast_json_safe"
+require_relative "acts_as_calculator/calculator_cache"
+require_relative "acts_as_calculator/find_owned_record"
+require_relative "acts_as_calculator/build_lookups"
+require_relative "acts_as_calculator/resolve_formula_version"
+require_relative "acts_as_calculator/persist_run"
+require_relative "acts_as_calculator/evaluate_formula"
+
+require_relative "acts_as_calculator/calculable" if defined?(::ActiveSupport)
+require_relative "acts_as_calculator/engine" if defined?(::Rails::Engine)
