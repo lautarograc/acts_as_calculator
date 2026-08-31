@@ -46,6 +46,16 @@ require_relative "acts_as_calculator/evaluate_formula"
 require_relative "acts_as_calculator/resolve_template"
 require_relative "acts_as_calculator/promote_template"
 require_relative "acts_as_calculator/render_template"
+require_relative "acts_as_calculator/import_outcome"
+require_relative "acts_as_calculator/import_summary"
+require_relative "acts_as_calculator/read_import_file"
+require_relative "acts_as_calculator/resolve_import_owner"
+require_relative "acts_as_calculator/find_lookup_table_references"
+require_relative "acts_as_calculator/supersede_formula_versions"
+require_relative "acts_as_calculator/import_lookup_table"
+require_relative "acts_as_calculator/import_formula"
+require_relative "acts_as_calculator/import_template"
+require_relative "acts_as_calculator/import_definitions"
 
 require_relative "acts_as_calculator/calculable" if defined?(::ActiveSupport)
 require_relative "acts_as_calculator/engine" if defined?(::Rails::Engine)

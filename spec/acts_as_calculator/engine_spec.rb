@@ -25,6 +25,11 @@ RSpec.describe ActsAsCalculator::Engine do
     expect(described_class.paths["db/migrate"].existent).to be_empty
   end
 
+  it "puts the import task where the engine loads a host's rake tasks from" do
+    expect(described_class.paths["lib/tasks"].existent)
+      .to include(described_class.root.join("lib/tasks/acts_as_calculator.rake").to_s)
+  end
+
   it "does not mount routes yet" do
     expect(described_class.routes.routes).to be_empty
   end

@@ -17,4 +17,7 @@ module ActsAsCalculator
   class TemplateNotFoundError < Error; end
   class TemplateRenderError < Error; end
   class UnsafeAssignError < Error; end
+  class PartialSupersedeError < Error; end
+  class ImportError < Error; end
+  class LookupTableInUseError < ImportError; end
 end
