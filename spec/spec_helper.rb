@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+ENV["RAILS_ENV"] ||= "test"
+
 require "bigdecimal"
 require "date"
 
@@ -11,6 +13,8 @@ require "acts_as_calculator"
 require_relative "support/install_migration"
 require_relative "support/schema"
 require_relative "support/host_models"
+require_relative "support/host_app"
+require_relative "support/api_helpers"
 require_relative "support/factories"
 
 RSpec.configure do |config|
@@ -30,6 +34,8 @@ RSpec.configure do |config|
   end
 
   config.after { ActsAsCalculator::CalculatorCache.default.clear }
+  config.after { ActsAsCalculator.reset_configuration! }
 
   config.include Factories
+  config.include ApiHelpers, type: :request
 end

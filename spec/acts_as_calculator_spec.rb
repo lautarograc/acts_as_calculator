@@ -18,7 +18,8 @@ RSpec.describe ActsAsCalculator do
       :Result, :Tier, :VariableSpec, :CastDecimal, :FindTier, :FunctionRegistry, :BuildCalculator,
       :EvaluateExpression, :ResolveVariables, :Apportionment, :ApportionAmount, :DistributeRemainder,
       :DivideProportionally, :Aggregation, :AggregateResults,
-      :CastLiquidValue, :ResultDrop, :FormulaVersionDrop, :LiquidFilters, :RenderLiquid
+      :CastLiquidValue, :ResultDrop, :FormulaVersionDrop, :LiquidFilters, :RenderLiquid,
+      :Configuration
     )
   end
 

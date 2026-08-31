@@ -42,16 +42,8 @@ module ActsAsCalculator
     end
 
     def add_version(target)
-      SupersedeFormulaVersions.(formula: target, effective_from:, effective_to:) if status == FormulaVersion::ACTIVE
-
-      version = target.versions.create!(**version_attributes(target))
-      declared_variables.each { |variable| version.variables.create!(**variable) }
-      version
-    end
-
-    def version_attributes(target)
-      { version_number: (target.versions.maximum(:version_number) || 0) + 1,
-        expression:, effective_from:, effective_to:, status:, change_note: attributes["change_note"] }
+      PublishFormulaVersion.(formula: target, expression:, effective_from:, effective_to:, status:,
+                             change_note: attributes["change_note"], variables: declared_variables)
     end
 
     def expression
@@ -82,12 +74,9 @@ module ActsAsCalculator
 
     def declared_variable(variable)
       variable = variable.transform_keys(&:to_s)
-      name = variable.fetch("name") { raise ImportError, "formula #{key.inspect} has a variable with no name" }
+      variable.fetch("name") { raise ImportError, "formula #{key.inspect} has a variable with no name" }
 
-      { name: name.to_s,
-        source_type: (variable["source_type"] || "context").to_s,
-        source_config: CastJsonSafe.(variable["source_config"] || {}),
-        required: variable.fetch("required", true) != false }
+      CastVariableAttributes.(variable)
     end
 
     def declared_specs

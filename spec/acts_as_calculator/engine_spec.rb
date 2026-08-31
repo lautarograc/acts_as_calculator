@@ -30,8 +30,19 @@ RSpec.describe ActsAsCalculator::Engine do
       .to include(described_class.root.join("lib/tasks/acts_as_calculator.rake").to_s)
   end
 
-  it "does not mount routes yet" do
-    expect(described_class.routes.routes).to be_empty
+  it "draws its API routes from the engine's own config/routes.rb" do
+    expect(described_class.routes.routes.map(&:name).compact)
+      .to include("formulas", "formula_versions", "templates", "preview_template", "import")
+  end
+
+  it "leaves no route outside the enable_api constraint" do
+    ungated = described_class.routes.routes.reject do |route|
+      route.app.is_a?(::ActionDispatch::Routing::Mapper::Constraints) &&
+        route.app.constraints.any? { |constraint| constraint.is_a?(Proc) }
+    end
+
+    expect(described_class.routes.routes).not_to be_empty
+    expect(ungated).to be_empty
   end
 
   it "loads only what the engine layer needs, never the full rails gem" do

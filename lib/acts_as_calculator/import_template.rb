@@ -34,10 +34,7 @@ module ActsAsCalculator
     end
 
     def publish
-      template = Template.new(key:, scope:, owner:, body:, format:, current: true)
-      template.version_number = template.next_version_number
-      template.save!
-      template
+      PublishTemplate.(key:, scope:, owner:, body:, format:)
     end
 
     def body
