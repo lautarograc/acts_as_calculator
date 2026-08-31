@@ -2,6 +2,7 @@
 
 require "bigdecimal"
 require "dentaku"
+require "liquid"
 
 require_relative "acts_as_calculator/version"
 require_relative "acts_as_calculator/errors"
@@ -20,6 +21,11 @@ require_relative "acts_as_calculator/apportionment"
 require_relative "acts_as_calculator/apportion_amount"
 require_relative "acts_as_calculator/aggregation"
 require_relative "acts_as_calculator/aggregate_results"
+require_relative "acts_as_calculator/formula_version_drop"
+require_relative "acts_as_calculator/result_drop"
+require_relative "acts_as_calculator/cast_liquid_value"
+require_relative "acts_as_calculator/liquid_filters"
+require_relative "acts_as_calculator/render_liquid"
 
 module ActsAsCalculator
   DEFAULT_SCOPE = "default"
@@ -37,6 +43,9 @@ require_relative "acts_as_calculator/build_lookups"
 require_relative "acts_as_calculator/resolve_formula_version"
 require_relative "acts_as_calculator/persist_run"
 require_relative "acts_as_calculator/evaluate_formula"
+require_relative "acts_as_calculator/resolve_template"
+require_relative "acts_as_calculator/promote_template"
+require_relative "acts_as_calculator/render_template"
 
 require_relative "acts_as_calculator/calculable" if defined?(::ActiveSupport)
 require_relative "acts_as_calculator/engine" if defined?(::Rails::Engine)

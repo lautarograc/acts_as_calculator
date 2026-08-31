@@ -17,7 +17,8 @@ RSpec.describe ActsAsCalculator do
     expect(described_class.constants).to include(
       :Result, :Tier, :VariableSpec, :CastDecimal, :FindTier, :FunctionRegistry, :BuildCalculator,
       :EvaluateExpression, :ResolveVariables, :Apportionment, :ApportionAmount, :DistributeRemainder,
-      :DivideProportionally, :Aggregation, :AggregateResults
+      :DivideProportionally, :Aggregation, :AggregateResults,
+      :CastLiquidValue, :ResultDrop, :FormulaVersionDrop, :LiquidFilters, :RenderLiquid
     )
   end
 

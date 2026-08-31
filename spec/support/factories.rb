@@ -31,6 +31,14 @@ module Factories
     table
   end
 
+  def build_template(key: "payslip", scope: "payroll", owner: nil, body: "{{ result | currency }}",
+                     format: ActsAsCalculator::Template::HTML, version_number: nil, current: true)
+    template = ActsAsCalculator::Template.new(key:, scope:, owner:, body:, format:, current:)
+    template.version_number = version_number || template.next_version_number
+    template.save!
+    template
+  end
+
   def build_employee(name: "Ada", salary: 1000, days_worked: 20, department: nil, model: SpecEmployee)
     model.create!(name:, salary:, days_worked:, spec_department: department)
   end

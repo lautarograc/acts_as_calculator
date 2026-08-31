@@ -14,4 +14,7 @@ module ActsAsCalculator
   class AggregationError < Error; end
   class FormulaNotFoundError < Error; end
   class NoEffectiveVersionError < Error; end
+  class TemplateNotFoundError < Error; end
+  class TemplateRenderError < Error; end
+  class UnsafeAssignError < Error; end
 end

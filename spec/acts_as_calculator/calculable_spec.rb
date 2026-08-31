@@ -80,6 +80,22 @@ RSpec.describe ActsAsCalculator::Calculable do
     it "defaults calculator_owner to nil so an unmodified host stays global" do
       expect(employee.calculator_owner).to be_nil
     end
+
+    it "reaches a variable whose name collides with a reserved keyword via context:" do
+      version = build_version(formula: build_formula(key: "net_pay", scope: "payroll"), expression: "scope * 2")
+      build_variable(version:, name: "scope", source_type: "context")
+
+      expect(employee.calculate("net_pay", context: { scope: 21 }, dry_run: true).value)
+        .to eq(BigDecimal("42"))
+    end
+
+    it "lets context: win over a splatted keyword of the same name" do
+      version = build_version(formula: build_formula(key: "net_pay", scope: "payroll"), expression: "bonus")
+      build_variable(version:, name: "bonus", source_type: "context")
+
+      expect(employee.calculate("net_pay", bonus: 1, context: { bonus: 99 }, dry_run: true).value)
+        .to eq(BigDecimal("99"))
+    end
   end
 
   describe "#calculate_as_of" do
@@ -134,8 +150,98 @@ RSpec.describe ActsAsCalculator::Calculable do
   end
 
   describe "#render" do
-    it "is a documented Phase 3 placeholder rather than a silent no-op" do
-      expect { employee.render("payslip") }.to raise_error(NotImplementedError, /Phase 3/)
+    it "chains a calculation and a render in one call" do
+      declare_net_pay
+      build_template(body: "Net pay: {{ result | currency }}")
+
+      expect(employee.render("payslip", calculate: "net_pay")).to eq("Net pay: 2,000.00")
+    end
+
+    it "renders a Result the caller already computed" do
+      declare_net_pay
+      build_template(body: "{{ result | currency }}")
+
+      expect(employee.render("payslip", result: employee.calculate("net_pay", dry_run: true))).to eq("2,000.00")
+    end
+
+    it "replays a past date through both the calculation and the template" do
+      formula = build_formula(key: "net_pay", scope: "payroll")
+      old = build_version(formula:, expression: "salary * 1", effective_from: Date.new(2026, 1, 1),
+                          effective_to: Date.new(2026, 6, 30))
+      build_variable(version: old, name: "salary", source_type: "attribute")
+      build_template(body: "{{ result | currency }} on {{ result.as_of | date }}")
+
+      expect(employee.render("payslip", calculate: "net_pay", as_of: Date.new(2026, 3, 1), dry_run: true))
+        .to eq("1,000.00 on 2026-03-01")
+    end
+
+    it "assigns several formulas under results" do
+      declare_net_pay
+      gross = build_version(formula: build_formula(key: "gross_pay", scope: "payroll"), expression: "salary * 3")
+      build_variable(version: gross, name: "salary", source_type: "attribute")
+      build_template(body: "{{ results.gross_pay | currency }}/{{ results.net_pay | currency }}")
+
+      expect(employee.render("payslip", calculate: %i[gross_pay net_pay], dry_run: true))
+        .to eq("3,000.00/2,000.00")
+    end
+
+    it "passes leftover keywords to the calculation and the template alike" do
+      version = build_version(formula: build_formula(key: "net_pay", scope: "payroll"), expression: "bonus * 2")
+      build_variable(version:, name: "bonus", source_type: "context")
+      build_template(body: "{{ bonus }} → {{ result | currency }}")
+
+      expect(employee.render("payslip", calculate: "net_pay", bonus: 50, dry_run: true)).to eq("50 → 100.00")
+    end
+
+    it "resolves the template in the host model's own scope" do
+      build_template(scope: "payroll", body: "payroll one")
+      build_template(scope: ActsAsCalculator::DEFAULT_SCOPE, body: "default one")
+
+      expect(employee.render("payslip")).to eq("payroll one")
+    end
+
+    it "reaches an owner's template through the host's calculator_owner" do
+      department = SpecDepartment.create!(name: "Engineering")
+      build_template(body: "global")
+      build_template(owner: department, body: "owned")
+      tenant = build_employee(department:, model: SpecTenantEmployee)
+
+      expect(tenant.render("payslip")).to eq("owned")
+    end
+
+    it "writes an audit row for the calculation it chained, unless asked not to" do
+      declare_net_pay
+      build_template(body: "{{ result }}")
+
+      expect { employee.render("payslip", calculate: "net_pay") }.to change(ActsAsCalculator::Run, :count).by(1)
+      expect { employee.render("payslip", calculate: "net_pay", dry_run: true) }
+        .not_to change(ActsAsCalculator::Run, :count)
+    end
+
+    it "renders an older version when one is pinned" do
+      build_template(body: "v1")
+      build_template(body: "v2")
+
+      expect(employee.render("payslip", version_number: 1)).to eq("v1")
+    end
+
+    it "raises when the template is missing" do
+      expect { employee.render("nowhere") }.to raise_error(ActsAsCalculator::TemplateNotFoundError)
+    end
+
+    it "does not expose the host record to the template" do
+      build_template(body: "[{{ employee }}][{{ salary }}]")
+
+      expect(employee.render("payslip")).to eq("[][]")
+    end
+
+    it "carries context: through to both the calculation and the assigns" do
+      version = build_version(formula: build_formula(key: "net_pay", scope: "payroll"), expression: "scope * 2")
+      build_variable(version:, name: "scope", source_type: "context")
+      build_template(body: "{{ scope }} → {{ result | currency }}")
+
+      expect(employee.render("payslip", calculate: "net_pay", context: { scope: 21 }, dry_run: true))
+        .to eq("21 → 42.00")
     end
   end
 

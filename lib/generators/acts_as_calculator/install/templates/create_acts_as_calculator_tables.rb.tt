@@ -69,6 +69,7 @@ class CreateActsAsCalculatorTables < ActiveRecord::Migration<%= migration_versio
       t.text :body, null: false
       t.string :format, null: false, default: "html"
       t.integer :version_number, null: false, default: 1
+      t.boolean :current, null: false, default: true
       t.timestamps
     end
     add_index :calculator_templates, %i[key scope owner_type owner_id version_number],
@@ -93,9 +94,21 @@ class CreateActsAsCalculatorTables < ActiveRecord::Migration<%= migration_versio
     add_global_uniqueness :calculator_lookup_tables, %i[key scope], "idx_calc_lookup_tables_global_key_scope"
     add_global_uniqueness :calculator_templates, %i[key scope version_number],
                           "idx_calc_templates_global_key_scope_version"
+
+    add_single_current_template
   end
 
   private
+
+  def add_single_current_template
+    return unless connection.supports_partial_index?
+
+    add_index :calculator_templates, %i[key scope owner_type owner_id],
+              unique: true, where: "current = TRUE", name: "idx_calc_templates_one_current"
+    add_index :calculator_templates, %i[key scope],
+              unique: true, where: "current = TRUE AND owner_id IS NULL",
+              name: "idx_calc_templates_one_current_global"
+  end
 
   def add_global_uniqueness(table, columns, name)
     return unless connection.supports_partial_index?

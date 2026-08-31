@@ -36,12 +36,14 @@ RSpec.describe ActsAsCalculator::Generators::InstallGenerator do
   end
 
   it "never indexes a key on its own" do
-    unique_indexes = contents.scan(/add_index :(\w+), (%i\[[^\]]+\]|:\w+),\s*\n?\s*unique: true/)
+    unique_indexes = contents.scan(/add_index :(\w+), (%i\[[^\]]+\]|:\w+),\s*\n?\s*unique: true,?([^\n]*)/)
 
     expect(unique_indexes).to be_any
-    unique_indexes.each do |(_table, columns)|
+    unique_indexes.each do |(_table, columns, options)|
       expect(columns).not_to eq(":key")
-      expect(columns).to include("owner_type owner_id") if columns.include?("key")
+      next unless columns.include?("key")
+
+      expect(columns.include?("owner_type owner_id") || options.include?("owner_id IS NULL")).to be(true)
     end
   end
 

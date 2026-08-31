@@ -20,7 +20,7 @@ RSpec.describe "the acts_as_calculator schema" do
                                         effective_to status change_note],
     "calculator_variables" => %w[formula_version_id name source_type source_config required],
     "calculator_lookup_table_entries" => %w[lookup_table_id from to value],
-    "calculator_templates" => %w[key scope body format],
+    "calculator_templates" => %w[key scope body format version_number current],
     "calculator_runs" => %w[calculable_type calculable_id formula_version_id as_of_date
                             inputs breakdown result]
   }.each do |table, columns|
@@ -42,6 +42,15 @@ RSpec.describe "the acts_as_calculator schema" do
   it "scopes template uniqueness past the key and across its version history" do
     expect(index_columns("calculator_templates"))
       .to include([%w[key scope owner_type owner_id version_number], true])
+  end
+
+  it "lets the database enforce one current template version per key, scope and owner" do
+    partial = connection.indexes("calculator_templates").select { |index| index.where.to_s.include?("current") }
+
+    expect(partial.map { |index| [index.columns, index.unique] }).to contain_exactly(
+      [%w[key scope owner_type owner_id], true],
+      [%w[key scope], true]
+    )
   end
 
   it "has no unique index on a bare key anywhere" do
