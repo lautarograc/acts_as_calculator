@@ -20,6 +20,7 @@ class CreateActsAsCalculatorTables < ActiveRecord::Migration<%= migration_versio
       t.date :effective_to
       t.string :status, null: false, default: "draft"
       t.text :change_note
+      t.column :formula_calls, json_type, null: true, default: {}
       t.timestamps
     end
     add_index :calculator_formula_versions, %i[formula_id version_number],

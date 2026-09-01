@@ -38,12 +38,22 @@ module ActsAsCalculator
       version.expression == expression &&
         version.effective_from == effective_from &&
         version.effective_to == effective_to &&
-        specs(version.variables) == declared_specs
+        specs(version.variables) == declared_specs &&
+        FormulaCall.list(version.formula_calls) == declared_calls
     end
 
     def add_version(target)
       PublishFormulaVersion.(formula: target, expression:, effective_from:, effective_to:, status:,
-                             change_note: attributes["change_note"], variables: declared_variables)
+                             change_note: attributes["change_note"], variables: declared_variables,
+                             formula_calls: declared_pins)
+    end
+
+    def declared_pins
+      attributes["formula_calls"]
+    end
+
+    def declared_calls
+      @declared_calls ||= ParseFormulaExpression.(expression:, scope:, owner:, pins: declared_pins)
     end
 
     def expression

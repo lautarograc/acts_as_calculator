@@ -96,6 +96,68 @@ RSpec.describe ActsAsCalculator::EvaluateFormula do
     expect(ActsAsCalculator::Run.count).to eq(0)
   end
 
+  describe "formula composition" do
+    def publish(key, expression, variables: [])
+      target = ActsAsCalculator::Formula.find_by(key:, scope: "payroll") || build_formula(key:, scope: "payroll")
+
+      ActsAsCalculator::PublishFormulaVersion.(formula: target, expression:,
+                                               effective_from: Factories::JANUARY, variables:)
+    end
+
+    def evaluate(**options)
+      described_class.(calculable: employee, key: "net_pay", scope: "payroll",
+                       as_of: Date.new(2026, 6, 1), **options)
+    end
+
+    it "resolves a chain of calls from the top-level key" do
+      publish("gross", "salary", variables: [{ name: "salary", source_type: "attribute" }])
+      publish("tax", "@gross * 0.3")
+      publish("net_pay", "@gross - @tax")
+
+      expect(evaluate(dry_run: true).value).to eq(BigDecimal("700"))
+    end
+
+    it "persists one run for the formula that was asked for, not for the ones it called" do
+      publish("gross", "salary", variables: [{ name: "salary", source_type: "attribute" }])
+      version = publish("net_pay", "@gross * 0.8")
+
+      evaluate
+
+      expect(ActsAsCalculator::Run.pluck(:formula_version_id)).to eq([version.id])
+    end
+
+    it "audits the called values on the persisted run" do
+      publish("gross", "salary", variables: [{ name: "salary", source_type: "attribute" }])
+      publish("net_pay", "@gross * 0.8")
+
+      evaluate
+
+      expect(ActsAsCalculator::Run.sole.breakdown["calls"])
+        .to contain_exactly(hash_including("key" => "gross", "value" => "1000.0"))
+    end
+
+    it "records nothing when a called formula blows up" do
+      publish("gross", "salary / 0", variables: [{ name: "salary", source_type: "attribute" }])
+      publish("net_pay", "@gross")
+
+      expect { evaluate }.to raise_error(ActsAsCalculator::FormulaCallError)
+      expect(ActsAsCalculator::Run.count).to eq(0)
+    end
+
+    it "picks each formula in the chain by the same as_of date" do
+      publish("gross", "salary", variables: [{ name: "salary", source_type: "attribute" }])
+      rate = build_formula(key: "rate", scope: "payroll")
+      build_version(formula: rate, expression: "1", effective_from: Date.new(2026, 1, 1),
+                    effective_to: Date.new(2026, 6, 30))
+      build_version(formula: rate, expression: "2", effective_from: Date.new(2026, 7, 1))
+      publish("net_pay", "@gross * @rate")
+
+      expect([evaluate(dry_run: true, as_of: Date.new(2026, 3, 1)).value,
+              evaluate(dry_run: true, as_of: Date.new(2026, 8, 1)).value])
+        .to eq([BigDecimal("1000"), BigDecimal("2000")])
+    end
+  end
+
   it "compiles a calculator once per formula version and reuses it" do
     declare(build_version(formula:, expression: "salary"), salary: { source_type: "attribute" })
     cache = ActsAsCalculator::CalculatorCache.new

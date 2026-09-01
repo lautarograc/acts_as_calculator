@@ -20,8 +20,7 @@ module ActsAsCalculator
 
     def call
       version = ResolveFormulaVersion.(key:, scope:, owner:, as_of:)
-      inputs = resolve_variables(version)
-      result = evaluate(version, inputs)
+      result = evaluate(version)
 
       PersistRun.(calculable:, formula_version: version, as_of:, result:) unless dry_run
       result
@@ -31,23 +30,8 @@ module ActsAsCalculator
 
     attr_reader :calculable, :key, :scope, :owner, :as_of, :context, :dry_run, :calculators
 
-    def resolve_variables(version)
-      ResolveVariables.(
-        specs: version.variables.to_a,
-        calculable:,
-        context:,
-        lookups: BuildLookups.(formula_version: version, owner:)
-      )
-    end
-
-    def evaluate(version, inputs)
-      EvaluateExpression.(
-        expression: version.expression,
-        inputs:,
-        calculator: calculators.fetch(version.id),
-        formula_version: version,
-        as_of:
-      )
+    def evaluate(version)
+      EvaluateFormulaCall.(formula_version: version, calculable:, owner:, as_of:, context:, calculators:)
     end
   end
 end

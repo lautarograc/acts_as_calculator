@@ -20,4 +20,6 @@ module ActsAsCalculator
   class PartialSupersedeError < Error; end
   class ImportError < Error; end
   class LookupTableInUseError < ImportError; end
+  class FormulaCallError < Error; end
+  class FormulaCallCycleError < FormulaCallError; end
 end

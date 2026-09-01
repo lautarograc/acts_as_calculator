@@ -12,10 +12,16 @@ module ActsAsCalculator
     def self.attributes(version)
       { id: version.id, formula_id: version.formula_id, version_number: version.version_number,
         expression: version.expression, status: version.status, change_note: version.change_note,
+        formula_calls: serialize_calls(version),
         effective_from: version.effective_from&.iso8601, effective_to: version.effective_to&.iso8601,
         created_at: version.created_at&.iso8601, updated_at: version.updated_at&.iso8601 }
     end
     private_class_method :attributes
+
+    def self.serialize_calls(version)
+      FormulaCall.document(FormulaCall.list(version.formula_calls))
+    end
+    private_class_method :serialize_calls
 
     def self.serialize_variable(variable)
       { id: variable.id, name: variable.name, source_type: variable.source_type,

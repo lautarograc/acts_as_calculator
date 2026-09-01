@@ -17,7 +17,7 @@ RSpec.describe "the acts_as_calculator schema" do
 
   {
     "calculator_formula_versions" => %w[formula_id version_number expression effective_from
-                                        effective_to status change_note],
+                                        effective_to status change_note formula_calls],
     "calculator_variables" => %w[formula_version_id name source_type source_config required],
     "calculator_lookup_table_entries" => %w[lookup_table_id from to value],
     "calculator_templates" => %w[key scope body format version_number current],
@@ -101,6 +101,13 @@ RSpec.describe "the acts_as_calculator schema" do
   it "stores json payloads as a type the adapter understands" do
     expect(ActsAsCalculator::Run.type_for_attribute("breakdown").type).to eq(:json)
     expect(ActsAsCalculator::Variable.type_for_attribute("source_config").type).to eq(:json)
+    expect(ActsAsCalculator::FormulaVersion.type_for_attribute("formula_calls").type).to eq(:json)
+  end
+
+  it "leaves formula_calls nullable so versions predating composition still load" do
+    calls = connection.columns("calculator_formula_versions").find { |column| column.name == "formula_calls" }
+
+    expect(calls.null).to be(true)
   end
 
   it "keeps enough precision on a run's result for money" do

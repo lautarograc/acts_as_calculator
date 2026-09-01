@@ -12,11 +12,13 @@ module Factories
 
   def build_version(formula: nil, expression: "1 + 1", effective_from: JANUARY,
                     effective_to: nil, status: ActsAsCalculator::FormulaVersion::ACTIVE,
-                    version_number: nil, change_note: nil)
+                    version_number: nil, change_note: nil, formula_calls: nil)
     formula ||= build_formula
     version_number ||= (formula.versions.maximum(:version_number) || 0) + 1
+    formula_calls ||= ActsAsCalculator::FormulaCall.document([])
 
-    formula.versions.create!(expression:, effective_from:, effective_to:, status:, version_number:, change_note:)
+    formula.versions.create!(expression:, effective_from:, effective_to:, status:, version_number:,
+                             change_note:, formula_calls:)
   end
 
   def build_variable(version:, name:, source_type: "context", source_config: {}, required: true)

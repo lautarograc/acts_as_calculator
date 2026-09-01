@@ -191,4 +191,87 @@ RSpec.describe ActsAsCalculator::ImportFormula do
       expect(import(owned).status).to eq(:skipped)
     end
   end
+
+  describe "formula calls" do
+    let(:calling) do
+      { "key" => "take_home", "scope" => "payroll", "expression" => "@net_pay * 0.9",
+        "effective_from" => "2026-01-01" }
+    end
+
+    def version_of(key)
+      ActsAsCalculator::Formula.find_by!(key:, scope: "payroll").versions.order(:version_number).last
+    end
+
+    it "records the calls the expression makes" do
+      import
+      import(calling)
+
+      expect(version_of("take_home").formula_calls)
+        .to eq("calls" => [{ "key" => "net_pay", "version_id" => nil }])
+    end
+
+    it "records an empty document for a formula that calls nothing" do
+      import
+
+      expect(version_of("net_pay").formula_calls).to eq("calls" => [])
+    end
+
+    it "records a version pin declared in the formula_calls field" do
+      import
+      pinned = version_of("net_pay")
+      import({ **calling, "formula_calls" => { "calls" => [{ "key" => "net_pay", "version_id" => pinned.id }] } })
+
+      expect(version_of("take_home").formula_calls)
+        .to eq("calls" => [{ "key" => "net_pay", "version_id" => pinned.id }])
+    end
+
+    it "accepts formula_calls as a bare list too" do
+      import
+      import({ **calling, "formula_calls" => [{ "key" => "net_pay", "version_id" => version_of("net_pay").id }] })
+
+      expect(version_of("take_home").formula_calls.fetch("calls").sole["version_id"])
+        .to eq(version_of("net_pay").id)
+    end
+
+    it "is idempotent for a formula that calls another" do
+      import
+      import(calling)
+
+      expect(import(calling).status).to eq(:skipped)
+    end
+
+    it "publishes a new version when only the pin changed" do
+      import
+      first = version_of("net_pay")
+      import(calling)
+
+      outcome = import({ **calling,
+                         "formula_calls" => { "calls" => [{ "key" => "net_pay", "version_id" => first.id }] } })
+
+      expect(outcome.status).to eq(:updated)
+      expect(version_of("take_home").version_number).to eq(2)
+    end
+
+    it "refuses an expression that calls a formula the file never defines" do
+      expect { import({ **calling, "expression" => "@nowhere * 2" }) }
+        .to raise_error(ActsAsCalculator::FormulaNotFoundError, /@nowhere/)
+    end
+
+    it "refuses an import that would close a cycle" do
+      import
+      import(calling)
+
+      expect { import({ **declared, "expression" => "@take_home", "effective_from" => "2027-01-01" }) }
+        .to raise_error(ActsAsCalculator::FormulaCallCycleError, /net_pay -> take_home -> net_pay/)
+    end
+
+    it "reports a bad reference as a failed outcome rather than aborting the whole file" do
+      summary = ActsAsCalculator::ImportDefinitions.(
+        data: { "formulas" => [{ **calling, "expression" => "@nowhere" }, declared] }
+      )
+
+      expect(summary.outcomes.map(&:status)).to eq(%i[failed created])
+      expect(summary.outcomes.first.detail).to match(/@nowhere/)
+    end
+  end
 end
