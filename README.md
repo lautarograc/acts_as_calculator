@@ -1,6 +1,6 @@
 # ActsAsCalculator
 
-A calculation engine for pricing, payroll, tax, and insurance domains. Built on [Dentaku](https://github.com/rubysolo/dentaku).
+A calculation engine for dynamic domains. Built on [Dentaku](https://github.com/rubysolo/dentaku).
 
 Add formula-based calculations to any model with `Calculable`. Formulas are versioned, effective-dated, can call other formulas, and render to Liquid templates.
 
